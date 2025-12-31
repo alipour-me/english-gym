@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AI Gym">
@@ -48,7 +49,7 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        /* Settings Modal (Initially Hidden) */
+        /* Settings Panel */
         #settings-panel {
             display: none;
             flex-direction: column;
@@ -66,6 +67,8 @@
             border-radius: 8px;
             color: white;
             font-size: 0.9rem;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         h2 { margin: 0 0 15px 0; color: var(--accent); font-size: 1.5rem; }
@@ -74,7 +77,7 @@
             background: rgba(0,0,0,0.2);
             padding: 20px;
             border-radius: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             font-size: 1.3rem;
             min-height: 80px;
             display: flex;
@@ -83,6 +86,15 @@
             align-items: center;
             gap: 5px;
             border: 1px solid var(--border);
+        }
+
+        /* Source Badge (New) */
+        #source-badge {
+            font-size: 0.8rem;
+            margin-bottom: 20px;
+            opacity: 0.7;
+            display: block;
+            min-height: 1.2em;
         }
 
         .word { padding: 4px 6px; border-radius: 5px; }
@@ -119,13 +131,13 @@
 <div class="container">
     <h2>🚀 AI Hybrid Gym</h2>
 
-    <div id="settings-panel">
-        <div style="font-size:0.9rem; margin-bottom:5px;">🔐 First Time Setup</div>
-        <input type="password" id="inp-gemini" placeholder="Paste Google Gemini Key">
-        <input type="password" id="inp-azure" placeholder="Paste Azure Key">
+    <form id="settings-panel" onsubmit="event.preventDefault(); saveKeys();">
+        <div style="font-size:0.9rem; margin-bottom:5px;">🔐 API Setup</div>
+        <input type="password" id="inp-gemini" placeholder="Paste Google Gemini Key" autocomplete="new-password">
+        <input type="password" id="inp-azure" placeholder="Paste Azure Key" autocomplete="new-password">
         <input type="text" id="inp-region" placeholder="Region (e.g. eastus)" value="eastus">
-        <button onclick="saveKeys()" style="background:#2563eb; margin-top:5px;">Save & Start</button>
-    </div>
+        <button type="submit" style="background:#2563eb; margin-top:5px;">Save & Start</button>
+    </form>
 
     <div id="main-app">
         <select id="level-input">
@@ -137,6 +149,8 @@
         </select>
 
         <div class="target-box" id="target-container">Tap Generate to start...</div>
+        
+        <span id="source-badge"></span>
 
         <div class="actions">
             <button id="btn-gen" class="btn-gen" onclick="generate()">⚡ Generate New</button>
@@ -180,7 +194,7 @@
             localStorage.setItem("azure_region", r);
             KEYS = { gemini: g, azure: a, region: r };
             checkKeys();
-            alert("Keys Saved! You are ready.");
+            alert("Keys Saved!");
         } else {
             alert("Please fill both keys.");
         }
@@ -213,6 +227,7 @@
     
     let currentText = "";
     const targetEl = document.getElementById('target-container');
+    const sourceBadge = document.getElementById('source-badge');
     const btnGen = document.getElementById('btn-gen');
 
     async function generate() {
@@ -222,6 +237,9 @@
         document.getElementById('score').innerText = "";
         
         try {
+            // Check if key exists
+            if (!KEYS.gemini) throw new Error("No API Key");
+
             // Try AI
             const prompt = `Generate a random creative English sentence (Level ${level}, max 12 words). Output ONLY text.`;
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${KEYS.gemini}`, {
@@ -231,14 +249,32 @@
             });
             
             const data = await res.json();
-            if(data.error) throw new Error("AI Fail");
             
+            // Explicit error handling from Google
+            if(data.error) {
+                console.error("GOOGLE API ERROR:", data.error);
+                throw new Error("Google API Error");
+            }
+            
+            if (!data.candidates || !data.candidates[0].content) {
+                console.error("INVALID RESPONSE:", data);
+                throw new Error("Invalid Response");
+            }
+
             currentText = data.candidates[0].content.parts[0].text.replace(/["*]/g, '').trim();
             
+            // Update Source Badge
+            sourceBadge.innerHTML = "✨ Source: <b>Google Gemini AI</b>";
+            sourceBadge.style.color = "#4ade80"; // Green
+
         } catch(e) {
             // Fallback
-            console.log("Offline mode");
+            console.warn("SWITCHING TO OFFLINE MODE. Reason:", e);
             currentText = generateLocal(level);
+            
+            // Update Source Badge
+            sourceBadge.innerHTML = "📦 Source: <b>Offline Engine</b> (AI Connection Failed)";
+            sourceBadge.style.color = "#facc15"; // Yellow
         }
         
         render(currentText);
@@ -277,7 +313,7 @@
         const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(KEYS.azure, KEYS.region);
         speechConfig.speechRecognitionLanguage = "en-US";
         const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
-        const pron = new SpeechSDK.PronunciationAssessmentConfig(currentText, 2, 1, true); // 2=HundredMark, 1=Word
+        const pron = new SpeechSDK.PronunciationAssessmentConfig(currentText, 2, 1, true); 
         
         const reco = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
         pron.applyTo(reco);
