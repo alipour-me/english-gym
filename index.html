@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AI Gym">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/brain.png">
+
+    <title>Hybrid English Gym</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@latest/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"></script>
+
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            --glass: rgba(255, 255, 255, 0.1);
+            --border: rgba(255, 255, 255, 0.2);
+            --text: #ffffff;
+            --accent: #00d2ff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            padding-top: env(safe-area-inset-top);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            touch-action: manipulation;
+        }
+
+        .container {
+            background: var(--glass);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--border);
+            padding: 20px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* Settings Modal (Initially Hidden) */
+        #settings-panel {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 12px;
+        }
+        
+        input {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--border);
+            padding: 10px;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        h2 { margin: 0 0 15px 0; color: var(--accent); font-size: 1.5rem; }
+
+        .target-box {
+            background: rgba(0,0,0,0.2);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            min-height: 80px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            border: 1px solid var(--border);
+        }
+
+        .word { padding: 4px 6px; border-radius: 5px; }
+        .word-correct { color: #4ade80; text-shadow: 0 0 10px rgba(74,222,128,0.3); }
+        .word-error { color: #f87171; text-decoration: underline wavy #f87171; }
+        
+        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        
+        button {
+            padding: 15px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .btn-gen { background: linear-gradient(135deg, #3a7bd5, #00d2ff); grid-column: span 2; }
+        .btn-listen { background: #fbbf24; color: #000; }
+        .btn-check { background: #10b981; }
+        .btn-settings { background: transparent; border: 1px solid var(--border); font-size: 0.8rem; margin-top: 20px; opacity: 0.6; }
+
+        select {
+            width: 100%; padding: 10px; margin-bottom: 15px;
+            background: rgba(0,0,0,0.3); color: white; border-radius: 10px; border: 1px solid var(--border);
+        }
+        
+        #score { margin-top: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🚀 AI Hybrid Gym</h2>
+
+    <div id="settings-panel">
+        <div style="font-size:0.9rem; margin-bottom:5px;">🔐 First Time Setup</div>
+        <input type="password" id="inp-gemini" placeholder="Paste Google Gemini Key">
+        <input type="password" id="inp-azure" placeholder="Paste Azure Key">
+        <input type="text" id="inp-region" placeholder="Region (e.g. eastus)" value="eastus">
+        <button onclick="saveKeys()" style="background:#2563eb; margin-top:5px;">Save & Start</button>
+    </div>
+
+    <div id="main-app">
+        <select id="level-input">
+            <option value="1">Level 1: Words</option>
+            <option value="2">Level 2: Simple Phrases</option>
+            <option value="3">Level 3: Sentences</option>
+            <option value="4">Level 4: Complex</option>
+            <option value="5">Level 5: Master</option>
+        </select>
+
+        <div class="target-box" id="target-container">Tap Generate to start...</div>
+
+        <div class="actions">
+            <button id="btn-gen" class="btn-gen" onclick="generate()">⚡ Generate New</button>
+            <button class="btn-listen" onclick="listen()">🔊 Listen</button>
+            <button id="btn-check" class="btn-check" onclick="check()">🎤 Check</button>
+        </div>
+        
+        <div id="score"></div>
+        <button class="btn-settings" onclick="toggleSettings()">⚙️ Edit API Keys</button>
+    </div>
+</div>
+
+<script>
+    // --- Local Storage Management ---
+    let KEYS = {
+        gemini: localStorage.getItem("gemini_key") || "",
+        azure: localStorage.getItem("azure_key") || "",
+        region: localStorage.getItem("azure_region") || "eastus"
+    };
+
+    function checkKeys() {
+        if(!KEYS.gemini || !KEYS.azure) {
+            document.getElementById('settings-panel').style.display = 'flex';
+            document.getElementById('main-app').style.opacity = '0.3';
+            document.getElementById('main-app').style.pointerEvents = 'none';
+        } else {
+            document.getElementById('settings-panel').style.display = 'none';
+            document.getElementById('main-app').style.opacity = '1';
+            document.getElementById('main-app').style.pointerEvents = 'all';
+        }
+    }
+    
+    function saveKeys() {
+        const g = document.getElementById('inp-gemini').value;
+        const a = document.getElementById('inp-azure').value;
+        const r = document.getElementById('inp-region').value;
+        
+        if(g && a) {
+            localStorage.setItem("gemini_key", g);
+            localStorage.setItem("azure_key", a);
+            localStorage.setItem("azure_region", r);
+            KEYS = { gemini: g, azure: a, region: r };
+            checkKeys();
+            alert("Keys Saved! You are ready.");
+        } else {
+            alert("Please fill both keys.");
+        }
+    }
+
+    function toggleSettings() {
+        const panel = document.getElementById('settings-panel');
+        if(panel.style.display === 'none') {
+            panel.style.display = 'flex';
+            document.getElementById('inp-gemini').value = KEYS.gemini;
+            document.getElementById('inp-azure').value = KEYS.azure;
+        } else {
+            panel.style.display = 'none';
+        }
+    }
+
+    // Initialize
+    checkKeys();
+
+    // --- Core Logic ---
+    const vocabulary = {
+        nouns: ["time", "person", "year", "way", "day", "thing", "man", "world", "life", "hand", "part", "child", "eye", "woman", "place", "work", "week", "case", "point", "government", "company", "number", "group", "problem", "fact"],
+        verbs: ["be", "have", "do", "say", "get", "make", "go", "know", "take", "see", "come", "think", "look", "want", "give", "use", "find", "tell", "ask", "work", "seem", "feel", "try", "leave", "call"],
+        adjectives: ["good", "new", "first", "last", "long", "great", "little", "own", "other", "old", "right", "big", "high", "different", "small", "large", "next", "early", "young", "important", "few", "public", "bad", "same", "able"],
+        adverbs: ["up", "so", "out", "just", "now", "how", "then", "more", "also", "here", "well", "only", "very", "even", "back", "there", "down", "still", "in", "as", "never", "really", "most"]
+    };
+    
+    const rand = (a) => a[Math.floor(Math.random()*a.length)];
+    const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+    
+    let currentText = "";
+    const targetEl = document.getElementById('target-container');
+    const btnGen = document.getElementById('btn-gen');
+
+    async function generate() {
+        const level = document.getElementById('level-input').value;
+        btnGen.disabled = true;
+        btnGen.innerText = "Thinking...";
+        document.getElementById('score').innerText = "";
+        
+        try {
+            // Try AI
+            const prompt = `Generate a random creative English sentence (Level ${level}, max 12 words). Output ONLY text.`;
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${KEYS.gemini}`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            
+            const data = await res.json();
+            if(data.error) throw new Error("AI Fail");
+            
+            currentText = data.candidates[0].content.parts[0].text.replace(/["*]/g, '').trim();
+            
+        } catch(e) {
+            // Fallback
+            console.log("Offline mode");
+            currentText = generateLocal(level);
+        }
+        
+        render(currentText);
+        btnGen.disabled = false;
+        btnGen.innerText = "⚡ Generate New";
+    }
+
+    function generateLocal(lvl) {
+        if(lvl==1) return capitalize(rand(vocabulary.nouns));
+        if(lvl==2) return capitalize(`${rand(vocabulary.adjectives)} ${rand(vocabulary.nouns)}`);
+        return capitalize(`The ${rand(vocabulary.adjectives)} ${rand(vocabulary.nouns)} ${rand(vocabulary.verbs)}`);
+    }
+
+    function render(txt) {
+        targetEl.innerHTML = "";
+        txt.split(" ").forEach(w => {
+            const s = document.createElement("span");
+            s.className = "word"; s.innerText = w;
+            targetEl.appendChild(s);
+            targetEl.appendChild(document.createTextNode(" "));
+        });
+    }
+
+    function listen() {
+        if(!currentText) return;
+        const u = new SpeechSynthesisUtterance(currentText);
+        u.lang = "en-US"; window.speechSynthesis.speak(u);
+    }
+
+    function check() {
+        if(!currentText) return;
+        const btn = document.getElementById('btn-check');
+        const old = btn.innerText;
+        btn.disabled = true; btn.innerText = "👂 ...";
+
+        const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(KEYS.azure, KEYS.region);
+        speechConfig.speechRecognitionLanguage = "en-US";
+        const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+        const pron = new SpeechSDK.PronunciationAssessmentConfig(currentText, 2, 1, true); // 2=HundredMark, 1=Word
+        
+        const reco = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+        pron.applyTo(reco);
+
+        reco.recognizeOnceAsync(res => {
+            btn.disabled = false; btn.innerText = old; reco.close();
+            if(res.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
+                const r = SpeechSDK.PronunciationAssessmentResult.fromResult(res);
+                document.getElementById('score').innerHTML = `Score: <span style="color:${r.accuracyScore>=80?'#4ade80':'#f87171'}">${r.accuracyScore}</span>`;
+                
+                const json = JSON.parse(res.json);
+                const spans = document.querySelectorAll('.word');
+                if(json.NBest && json.NBest.length>0) {
+                    json.NBest[0].Words.forEach((w, i) => {
+                        if(i < spans.length) {
+                            spans[i].className = "word " + (w.PronunciationAssessment.ErrorType==="None" && w.PronunciationAssessment.AccuracyScore>=80 ? "word-correct" : "word-error");
+                        }
+                    });
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>
