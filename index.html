@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-title" content="AI Gym">
     <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/brain.png">
 
-    <title>Gemini 2.5 Gym (Smart Levels)</title>
+    <title>English Gym</title>
     
     <script src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@latest/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"></script>
 
@@ -73,7 +73,7 @@
 
         h2 { margin: 0 0 15px 0; color: var(--accent); font-size: 1.6rem; letter-spacing: -1px;}
 
-        h5 { color: var(--accent); font-size: 0.8rem; letter-spacing: 0px;}
+        h5 { color: var(--accent); font-size: 0.8rem; letter-spacing: 0px; margin-top: 15px;}
         h5 a { color: var(--accent); text-decoration: none;}
 
         .target-box {
@@ -144,7 +144,7 @@
 <body>
 
 <div class="container">
-    <h2>✨ English Gym</h2>
+    <h2>✨ English Gym ✨</h2>
 
     <form id="settings-panel" onsubmit="event.preventDefault(); saveKeys();">
         <div style="font-size:0.9rem; margin-bottom:5px;">🔐 API Setup</div>
@@ -244,7 +244,24 @@
 
     checkKeys();
 
-    const vocabulary = { nouns: ["strategy", "innovation"], verbs: ["improve", "develop"], adjectives: ["effective", "global"] };
+    // --- 🔥 MEGA VOCABULARY ENGINE (Offline Fallback) ---
+    // This ensures variety even when AI fails.
+    const vocab = {
+        subjects: ["The cat", "My friend", "A stranger", "The teacher", "This project", "Our team", "The system", "Technology", "The weather", "A doctor", "The artist", "This computer", "The government", "A driver", "My boss", "The solution", "An engineer", "The music", "History", "Nature"],
+        verbs: ["creates", "improves", "destroys", "considers", "remembers", "understands", "develops", "changes", "requires", "follows", "guides", "analyzes", "builds", "finds", "loses", "needs", "wants", "supports", "challenges", "discovers"],
+        adjectives: ["creative", "global", "effective", "dangerous", "beautiful", "complex", "simple", "modern", "ancient", "rapid", "slow", "intelligent", "expensive", "cheap", "necessary", "impossible", "real", "fake", "huge", "tiny"],
+        objects: ["the future", "a new strategy", "the big problem", "a simple idea", "the environment", "my question", "the answer", "a fast car", "the blue sky", "an old book", "the tasty food", "a difficult exam", "the software", "a golden opportunity", "the silence", "a secret"],
+        adverbs: ["quickly", "slowly", "suddenly", "carefully", "actually", "probably", "certainly", "eventually", "recently", "always", "never", "often", "rarely", "usually"],
+        conjunctions: ["because", "although", "while", "but", "so", "if", "when", "before", "after"],
+        business_terms: ["synergy", "paradigm shift", "ROI", "bandwidth", "deliverables", "touchpoint", "leverage", "scalability", "best practice", "ecosystem"],
+        
+        // Level 1 Words
+        l1: ["Apple", "Book", "Car", "Dog", "Eat", "Fast", "Go", "Happy", "Ice", "Jump", "Key", "Love", "Moon", "No", "Open", "Pen", "Quiet", "Red", "Sun", "Time", "Up", "Van", "Water", "Yes", "Zoo", "Bird", "Cat", "Door", "Fish", "Good"],
+        
+        // Level 2 Phrases
+        l2: ["Good morning", "How are you", "Thank you", "Excuse me", "I am sorry", "Turn left", "Go straight", "Come here", "Sit down", "Stand up", "Open the door", "Close the window", "A cup of coffee", "My blue car", "Very good", "Not bad", "See you later", "Have a nice day"]
+    };
+
     const rand = (a) => a[Math.floor(Math.random()*a.length)];
     const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
     
@@ -267,17 +284,21 @@
 
     // --- 🤖 SMART PROMPT GENERATION ---
     function getPrompt(level) {
+        // Added "unique" and "varied" keywords to prompt
+        const topics = ["Technology", "Travel", "Daily Life", "Food", "Work", "Nature", "Emotions", "Space", "History"];
+        const randomTopic = rand(topics);
+        
         switch(level) {
             case "1": 
-                return "Generate exactly ONE single random English word (Noun, Verb, or Adjective) suitable for A1 level beginners. No phrases, no punctuation. Just the word.";
+                return `Generate exactly ONE unique English word (Noun, Verb, or Adjective). Try to avoid very common words. Just the word.`;
             case "2":
-                return "Generate a short English phrase or idiom (2 to 4 words max). Example: 'A cup of tea', 'On the way'. Do NOT generate a full sentence with a period.";
+                return `Generate a useful English idiom or common phrase (2-4 words). Example: 'Break a leg', 'Once in a blue moon'. No periods.`;
             case "3":
-                return "Generate a simple, standard English sentence (Subject + Verb + Object) for B1 level. Approx 6-8 words.";
+                return `Generate a simple English sentence about ${randomTopic} (Subject + Verb + Object). Approx 6-8 words.`;
             case "4":
-                return "Generate a complex English sentence using conjunctions (e.g., although, because, while) suitable for B2 level. Approx 10-12 words.";
+                return `Generate a complex sentence about ${randomTopic} using conjunctions (e.g., although, because). Approx 10-12 words.`;
             case "5":
-                return "Generate a professional Business English or Advanced Technical sentence suitable for C1 level. Use formal vocabulary.";
+                return `Generate a sophisticated sentence about ${randomTopic} using advanced C1 vocabulary.`;
             default:
                 return "Generate a random English sentence.";
         }
@@ -291,7 +312,6 @@
         try {
             if (!KEYS.gemini) throw new Error("No API Key");
             
-            // Get Specific Prompt based on Level
             const prompt = getPrompt(level) + " Output ONLY text.";
             
             let success = false;
@@ -308,17 +328,43 @@
         } catch(e) {
             console.warn("OFFLINE FALLBACK:", e);
             currentText = generateLocal(level);
-            sourceBadge.innerHTML = "📦 Source: <b>Offline Engine</b>";
+            sourceBadge.innerHTML = "📦 Source: <b>Offline Engine</b> (Randomized)";
             sourceBadge.style.color = "#f1c40f";
         }
         render(currentText);
-        btnGen.disabled = false; btnGen.innerText = "⚡ AI Generate";
+        btnGen.disabled = false; btnGen.innerText = "⚡ Generate";
     }
 
+    // --- 🏭 IMPROVED OFFLINE GENERATOR ---
     function generateLocal(lvl) {
-        if(lvl == "1") return rand(["Apple", "Run", "Blue", "Happy", "Fast"]);
-        if(lvl == "2") return rand(["Good morning", "In the car", "Wake up", "Come here"]);
-        return "The creative strategy can improve the global innovation.";
+        if(lvl == "1") return rand(vocab.l1);
+        if(lvl == "2") return rand(vocab.l2);
+        
+        // Grammar Engine for Levels 3, 4, 5
+        const subj = rand(vocab.subjects);
+        const verb = rand(vocab.verbs);
+        const adj = rand(vocab.adjectives);
+        const obj = rand(vocab.objects);
+        const adv = rand(vocab.adverbs);
+        const conj = rand(vocab.conjunctions);
+        const bus = rand(vocab.business_terms);
+
+        if(lvl == "3") {
+            // Simple: Subject + Verb + Adjective + Object
+            return `${subj} ${adv} ${verb} ${adj} ${obj}.`;
+        }
+        if(lvl == "4") {
+            // Complex: Clause 1 + Conjunction + Clause 2
+            const clause1 = `${subj} ${verb} ${obj}`;
+            const clause2 = `it is ${adj}`;
+            return capitalize(`${conj} ${clause1}, ${clause2}.`);
+        }
+        if(lvl == "5") {
+            // Business/Advanced
+            return `The ${bus} essentially ${verb} the ${bus} regarding ${obj}.`;
+        }
+        
+        return "Learning English opens many doors.";
     }
 
     function render(txt) {
