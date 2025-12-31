@@ -9,13 +9,13 @@
     <meta name="apple-mobile-web-app-title" content="AI Gym">
     <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/brain.png">
 
-    <title>Gemini 2.5 Gym</title>
+    <title>Gemini 2.5 Gym (Smart Levels)</title>
     
     <script src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@latest/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"></script>
 
     <style>
         :root {
-            --bg-gradient: linear-gradient(135deg, #1e130c 0%, #9a8478 100%); /* تم جدید (قهوه‌ای مدرن) */
+            --bg-gradient: linear-gradient(135deg, #1e130c 0%, #9a8478 100%); 
             --glass: rgba(255, 255, 255, 0.1);
             --border: rgba(255, 255, 255, 0.2);
             --text: #ffffff;
@@ -73,6 +73,9 @@
 
         h2 { margin: 0 0 15px 0; color: var(--accent); font-size: 1.6rem; letter-spacing: -1px;}
 
+        h5 { color: var(--accent); font-size: 0.8rem; letter-spacing: 0px;}
+        h5 a { color: var(--accent); text-decoration: none;}
+
         .target-box {
             background: rgba(0,0,0,0.25);
             padding: 25px;
@@ -84,14 +87,14 @@
             flex-wrap: wrap;
             justify-content: center;
             align-items: center;
-            gap: 6px;
+            /*gap: 6px;*/
             border: 1px solid var(--border);
             line-height: 1.5;
         }
 
         #source-badge {
             font-size: 0.8rem;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             opacity: 0.8;
             display: block;
             min-height: 1.2em;
@@ -99,10 +102,17 @@
             border-radius: 5px;
         }
 
-        .word { padding: 4px 6px; border-radius: 6px; transition: 0.2s;}
+        .word { padding: 2px 2px; border-radius: 6px; transition: 0.2s;}
         .word-correct { color: #2ecc71; background: rgba(46, 204, 113, 0.15); }
         .word-error { color: #ff6b6b; text-decoration: underline wavy #ff6b6b; }
         
+        .voice-controls {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
         .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         
         button {
@@ -123,9 +133,9 @@
         .btn-settings { background: transparent; border: 1px solid var(--border); font-size: 0.8rem; margin-top: 25px; opacity: 0.5; padding: 10px;}
 
         select {
-            width: 100%; padding: 12px; margin-bottom: 15px;
-            background: rgba(0,0,0,0.4); color: white; border-radius: 12px; border: 1px solid var(--border);
-            font-size: 1rem; outline: none;
+            width: 100%; padding: 10px; 
+            background: rgba(0,0,0,0.4); color: white; border-radius: 10px; border: 1px solid var(--border);
+            font-size: 0.9rem; outline: none;
         }
         
         #score { margin-top: 15px; font-weight: bold; font-size: 1.2rem;}
@@ -134,7 +144,7 @@
 <body>
 
 <div class="container">
-    <h2>✨ Gemini 2.5 Gym</h2>
+    <h2>✨ English Gym</h2>
 
     <form id="settings-panel" onsubmit="event.preventDefault(); saveKeys();">
         <div style="font-size:0.9rem; margin-bottom:5px;">🔐 API Setup</div>
@@ -146,29 +156,45 @@
     </form>
 
     <div id="main-app">
-        <select id="level-input">
-            <option value="1">Level A1: Words</option>
-            <option value="2">Level A2: Basic Phrases</option>
-            <option value="3">Level B1: Sentences</option>
-            <option value="4">Level B2: Complex</option>
-            <option value="5">Level C1: Advanced/Business</option>
+        <select id="level-input" style="margin-bottom: 15px;">
+            <option value="1">Level 1: Single Word (A1)</option>
+            <option value="2">Level 2: Short Phrase (A2)</option>
+            <option value="3">Level 3: Simple Sentence (B1)</option>
+            <option value="4">Level 4: Complex Sentence (B2)</option>
+            <option value="5">Level 5: Business/Professional (C1)</option>
         </select>
 
         <div class="target-box" id="target-container">Tap Generate...</div>
-        
         <span id="source-badge"></span>
 
+        <div class="voice-controls">
+            <select id="voice-name">
+                <option value="en-US-JennyNeural">👩 Jenny (Natural)</option>
+                <option value="en-US-GuyNeural">👨 Guy (Natural)</option>
+                <option value="en-US-AriaNeural">👩 Aria (Confident)</option>
+                <option value="en-US-DavisNeural">👨 Davis (Casual)</option>
+                <option value="en-US-AmberNeural">👩 Amber (Soft)</option>
+                <option value="en-US-SteffanNeural">👨 Steffan (Warm)</option>
+            </select>
+            <select id="voice-speed">
+                <option value="0%">Normal</option>
+                <option value="-15%">Slow</option>
+                <option value="-30%">Slower</option>
+                <option value="-50%">Super Slow</option>
+            </select>
+        </div>
+
         <div class="actions">
-            <button id="btn-gen" class="btn-gen" onclick="generate()">⚡ AI Generate</button>
-            <button class="btn-listen" onclick="listen()">🔊 Listen</button>
-            <button id="btn-check" class="btn-check" onclick="check()">🎤 Check</button>
+            <button id="btn-gen" class="btn-gen" onclick="generate()">⚡ Generate</button>
+            <button class="btn-listen" onclick="listen()">🔊</button>
+            <button id="btn-check" class="btn-check" onclick="check()">🎤</button>
         </div>
         
         <div id="score"></div>
         <button class="btn-settings" onclick="toggleSettings()">⚙️ API Keys</button>
     </div>
+    <h5 style="text-decoration: none;"><a href="https://alipour.me" target="_blank">✨ Alireza Alipour ✨</a></h5>
 </div>
-
 <script>
     let KEYS = {
         gemini: localStorage.getItem("gemini_key") || "",
@@ -218,13 +244,7 @@
 
     checkKeys();
 
-    // --- FALLBACK VOCABULARY ---
-    const vocabulary = {
-        nouns: ["opportunity", "challenge", "solution", "strategy", "innovation", "development", "community", "experience", "technology", "environment"],
-        verbs: ["create", "develop", "understand", "consider", "remember", "achieve", "improve", "support", "discover", "manage"],
-        adjectives: ["creative", "effective", "successful", "important", "necessary", "available", "potential", "significant", "global", "local"]
-    };
-    
+    const vocabulary = { nouns: ["strategy", "innovation"], verbs: ["improve", "develop"], adjectives: ["effective", "global"] };
     const rand = (a) => a[Math.floor(Math.random()*a.length)];
     const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
     
@@ -233,78 +253,72 @@
     const sourceBadge = document.getElementById('source-badge');
     const btnGen = document.getElementById('btn-gen');
 
-    // --- 💎 NEW MODEL LIST (BASED ON YOUR SCREENSHOT) ---
-    // We try the newest one first. If it fails, we go to the "lite" one.
-    const MODEL_QUEUE = [
-        "gemini-2.5-flash",                  // Newest & Fastest
-        "gemini-2.0-flash-lite-preview-02-05", // Lite version (often better quota)
-        "gemini-2.0-flash",                  // Standard 2.0
-    ];
+    const MODEL_QUEUE = ["gemini-2.5-flash", "gemini-2.0-flash-lite-preview-02-05", "gemini-2.0-flash"];
 
     async function fetchGemini(modelName, prompt) {
-        console.log("Attempting:", modelName);
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${KEYS.gemini}`, {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
+            method: "POST", headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
         });
         const data = await response.json();
-        
-        if(data.error) {
-            throw new Error(`[${modelName}] ${data.error.message}`);
-        }
+        if(data.error) throw new Error(`[${modelName}] ${data.error.message}`);
         return data.candidates[0].content.parts[0].text;
+    }
+
+    // --- 🤖 SMART PROMPT GENERATION ---
+    function getPrompt(level) {
+        switch(level) {
+            case "1": 
+                return "Generate exactly ONE single random English word (Noun, Verb, or Adjective) suitable for A1 level beginners. No phrases, no punctuation. Just the word.";
+            case "2":
+                return "Generate a short English phrase or idiom (2 to 4 words max). Example: 'A cup of tea', 'On the way'. Do NOT generate a full sentence with a period.";
+            case "3":
+                return "Generate a simple, standard English sentence (Subject + Verb + Object) for B1 level. Approx 6-8 words.";
+            case "4":
+                return "Generate a complex English sentence using conjunctions (e.g., although, because, while) suitable for B2 level. Approx 10-12 words.";
+            case "5":
+                return "Generate a professional Business English or Advanced Technical sentence suitable for C1 level. Use formal vocabulary.";
+            default:
+                return "Generate a random English sentence.";
+        }
     }
 
     async function generate() {
         const level = document.getElementById('level-input').value;
-        btnGen.disabled = true;
-        btnGen.innerText = "Thinking...";
+        btnGen.disabled = true; btnGen.innerText = "Thinking...";
         document.getElementById('score').innerText = "";
         
         try {
             if (!KEYS.gemini) throw new Error("No API Key");
             
-            // Prompt Engineering
-            const prompt = `Generate a random, useful English sentence (Level ${level}). 
-            Constraints: Max 15 words. No markdown. Output ONLY text.`;
+            // Get Specific Prompt based on Level
+            const prompt = getPrompt(level) + " Output ONLY text.";
             
             let success = false;
-
-            // --- SMART RETRY LOOP ---
             for (const model of MODEL_QUEUE) {
                 try {
                     currentText = await fetchGemini(model, prompt);
-                    
-                    // Success!
                     sourceBadge.innerHTML = `✨ Source: <b>${model}</b>`;
-                    sourceBadge.style.color = "#2ecc71"; // Green
-                    success = true;
-                    break; // Exit loop
-                } catch (err) {
-                    console.warn(`Skipping ${model}:`, err.message);
-                }
+                    sourceBadge.style.color = "#2ecc71";
+                    success = true; break;
+                } catch (err) { console.warn(`Skipping ${model}:`, err.message); }
             }
-
             if (!success) throw new Error("All Online Models Failed");
-
             currentText = currentText.replace(/["*]/g, '').trim();
-
         } catch(e) {
             console.warn("OFFLINE FALLBACK:", e);
             currentText = generateLocal(level);
-            sourceBadge.innerHTML = "📦 Source: <b>Offline Engine</b> (Internet/Quota Issue)";
-            sourceBadge.style.color = "#f1c40f"; // Yellow
+            sourceBadge.innerHTML = "📦 Source: <b>Offline Engine</b>";
+            sourceBadge.style.color = "#f1c40f";
         }
-        
         render(currentText);
-        btnGen.disabled = false;
-        btnGen.innerText = "⚡ AI Generate";
+        btnGen.disabled = false; btnGen.innerText = "⚡ AI Generate";
     }
 
     function generateLocal(lvl) {
-        // Simple fallback generator
-        return capitalize(`The ${rand(vocabulary.adjectives)} ${rand(vocabulary.nouns)} can ${rand(vocabulary.verbs)} the ${rand(vocabulary.nouns)}`);
+        if(lvl == "1") return rand(["Apple", "Run", "Blue", "Happy", "Fast"]);
+        if(lvl == "2") return rand(["Good morning", "In the car", "Wake up", "Come here"]);
+        return "The creative strategy can improve the global innovation.";
     }
 
     function render(txt) {
@@ -319,8 +333,38 @@
 
     function listen() {
         if(!currentText) return;
-        const u = new SpeechSynthesisUtterance(currentText);
-        u.lang = "en-US"; window.speechSynthesis.speak(u);
+        const btnListen = document.querySelector('.btn-listen');
+        const originalText = btnListen.innerText;
+        btnListen.disabled = true; btnListen.innerText = "⏳ Loading...";
+
+        const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(KEYS.azure, KEYS.region);
+        const selectedVoice = document.getElementById('voice-name').value;
+        const selectedSpeed = document.getElementById('voice-speed').value;
+
+        const ssml = `
+        <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
+            <voice name="${selectedVoice}">
+                <prosody rate="${selectedSpeed}">
+                    ${currentText}
+                </prosody>
+            </voice>
+        </speak>`;
+
+        const audioConfig = SpeechSDK.AudioConfig.fromDefaultSpeakerOutput();
+        const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
+
+        synthesizer.speakSsmlAsync(
+            ssml,
+            result => {
+                btnListen.disabled = false; btnListen.innerText = originalText;
+                synthesizer.close();
+            },
+            error => {
+                console.error("TTS Error:", error);
+                btnListen.disabled = false; btnListen.innerText = "Error";
+                synthesizer.close();
+            }
+        );
     }
 
     function check() {
@@ -332,10 +376,7 @@
         const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(KEYS.azure, KEYS.region);
         speechConfig.speechRecognitionLanguage = "en-US";
         const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
-        
-        // Config: 100-mark system, Phoneme level granularity
         const pron = new SpeechSDK.PronunciationAssessmentConfig(currentText, 2, 2, true); 
-        
         const reco = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
         pron.applyTo(reco);
 
@@ -344,9 +385,7 @@
             if(res.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
                 const r = SpeechSDK.PronunciationAssessmentResult.fromResult(res);
                 const score = r.accuracyScore;
-                
                 document.getElementById('score').innerHTML = `Score: <span style="color:${score>=80?'#2ecc71':'#ff6b6b'}">${score}</span>`;
-                
                 const json = JSON.parse(res.json);
                 const spans = document.querySelectorAll('.word');
                 if(json.NBest && json.NBest.length>0) {
