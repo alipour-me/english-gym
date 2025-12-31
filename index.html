@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1e130c">
+    <meta name="msapplication-navbutton-color" content="#1e130c">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="AI Gym">
+    <meta name="apple-mobile-web-app-title" content="English Gym">
     <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/brain.png">
 
     <title>English Gym</title>
@@ -22,18 +25,25 @@
             --accent: #ff9f43;
         }
 
+        html, body {
+            height: 100%; /* ارتفاع کامل */
+            margin: 0;
+            padding: 0;
+            background: var(--bg-gradient); /* اعمال پس‌زمینه به کل صفحه */
+            background-attachment: fixed; /* ثابت نگه داشتن گرادینت هنگام اسکرول */
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: var(--bg-gradient);
             color: var(--text);
-            margin: 0;
             padding: 20px;
-            padding-top: env(safe-area-inset-top);
+            padding-top: env(safe-area-inset-top); /* حفظ فاصله برای ناچ آیفون */
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             touch-action: manipulation;
+            box-sizing: border-box; /* جلوگیری از اسکرول افقی */
         }
 
         .container {
@@ -87,7 +97,6 @@
             flex-wrap: wrap;
             justify-content: center;
             align-items: center;
-            /*gap: 6px;*/
             border: 1px solid var(--border);
             line-height: 1.5;
         }
@@ -144,7 +153,7 @@
 <body>
 
 <div class="container">
-    <h2>✨ English Gym ✨</h2>
+    <h2>✨ English Gym</h2>
 
     <form id="settings-panel" onsubmit="event.preventDefault(); saveKeys();">
         <div style="font-size:0.9rem; margin-bottom:5px;">🔐 API Setup</div>
@@ -244,8 +253,6 @@
 
     checkKeys();
 
-    // --- 🔥 MEGA VOCABULARY ENGINE (Offline Fallback) ---
-    // This ensures variety even when AI fails.
     const vocab = {
         subjects: ["The cat", "My friend", "A stranger", "The teacher", "This project", "Our team", "The system", "Technology", "The weather", "A doctor", "The artist", "This computer", "The government", "A driver", "My boss", "The solution", "An engineer", "The music", "History", "Nature"],
         verbs: ["creates", "improves", "destroys", "considers", "remembers", "understands", "develops", "changes", "requires", "follows", "guides", "analyzes", "builds", "finds", "loses", "needs", "wants", "supports", "challenges", "discovers"],
@@ -254,11 +261,7 @@
         adverbs: ["quickly", "slowly", "suddenly", "carefully", "actually", "probably", "certainly", "eventually", "recently", "always", "never", "often", "rarely", "usually"],
         conjunctions: ["because", "although", "while", "but", "so", "if", "when", "before", "after"],
         business_terms: ["synergy", "paradigm shift", "ROI", "bandwidth", "deliverables", "touchpoint", "leverage", "scalability", "best practice", "ecosystem"],
-        
-        // Level 1 Words
         l1: ["Apple", "Book", "Car", "Dog", "Eat", "Fast", "Go", "Happy", "Ice", "Jump", "Key", "Love", "Moon", "No", "Open", "Pen", "Quiet", "Red", "Sun", "Time", "Up", "Van", "Water", "Yes", "Zoo", "Bird", "Cat", "Door", "Fish", "Good"],
-        
-        // Level 2 Phrases
         l2: ["Good morning", "How are you", "Thank you", "Excuse me", "I am sorry", "Turn left", "Go straight", "Come here", "Sit down", "Stand up", "Open the door", "Close the window", "A cup of coffee", "My blue car", "Very good", "Not bad", "See you later", "Have a nice day"]
     };
 
@@ -270,7 +273,14 @@
     const sourceBadge = document.getElementById('source-badge');
     const btnGen = document.getElementById('btn-gen');
 
-    const MODEL_QUEUE = ["gemini-2.5-flash", "gemini-2.0-flash-lite-preview-02-05", "gemini-2.0-flash"];
+    // --- 🚀 PRIORITY FIX ---
+    // Moved 'gemini-1.5-flash' to the TOP because it has the best free quota.
+    const MODEL_QUEUE = [
+        "gemini-1.5-flash",          // 15 RPM (Most Reliable)
+        "gemini-2.5-flash",          // Newest (Low Quota)
+        "gemini-2.0-flash-lite-preview-02-05", 
+        "gemini-2.0-flash"
+    ];
 
     async function fetchGemini(modelName, prompt) {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${KEYS.gemini}`, {
@@ -282,25 +292,16 @@
         return data.candidates[0].content.parts[0].text;
     }
 
-    // --- 🤖 SMART PROMPT GENERATION ---
     function getPrompt(level) {
-        // Added "unique" and "varied" keywords to prompt
         const topics = ["Technology", "Travel", "Daily Life", "Food", "Work", "Nature", "Emotions", "Space", "History"];
         const randomTopic = rand(topics);
-        
         switch(level) {
-            case "1": 
-                return `Generate exactly ONE unique English word (Noun, Verb, or Adjective). Try to avoid very common words. Just the word.`;
-            case "2":
-                return `Generate a useful English idiom or common phrase (2-4 words). Example: 'Break a leg', 'Once in a blue moon'. No periods.`;
-            case "3":
-                return `Generate a simple English sentence about ${randomTopic} (Subject + Verb + Object). Approx 6-8 words.`;
-            case "4":
-                return `Generate a complex sentence about ${randomTopic} using conjunctions (e.g., although, because). Approx 10-12 words.`;
-            case "5":
-                return `Generate a sophisticated sentence about ${randomTopic} using advanced C1 vocabulary.`;
-            default:
-                return "Generate a random English sentence.";
+            case "1": return `Generate exactly ONE unique English word (Noun, Verb, or Adjective). Try to avoid very common words. Just the word.`;
+            case "2": return `Generate a useful English idiom or common phrase (2-4 words). Example: 'Break a leg', 'Once in a blue moon'. No periods.`;
+            case "3": return `Generate a simple English sentence about ${randomTopic} (Subject + Verb + Object). Approx 6-8 words.`;
+            case "4": return `Generate a complex sentence about ${randomTopic} using conjunctions (e.g., although, because). Approx 10-12 words.`;
+            case "5": return `Generate a sophisticated sentence about ${randomTopic} using advanced C1 vocabulary.`;
+            default: return "Generate a random English sentence.";
         }
     }
 
@@ -335,12 +336,10 @@
         btnGen.disabled = false; btnGen.innerText = "⚡ Generate";
     }
 
-    // --- 🏭 IMPROVED OFFLINE GENERATOR ---
     function generateLocal(lvl) {
         if(lvl == "1") return rand(vocab.l1);
         if(lvl == "2") return rand(vocab.l2);
         
-        // Grammar Engine for Levels 3, 4, 5
         const subj = rand(vocab.subjects);
         const verb = rand(vocab.verbs);
         const adj = rand(vocab.adjectives);
@@ -349,21 +348,9 @@
         const conj = rand(vocab.conjunctions);
         const bus = rand(vocab.business_terms);
 
-        if(lvl == "3") {
-            // Simple: Subject + Verb + Adjective + Object
-            return `${subj} ${adv} ${verb} ${adj} ${obj}.`;
-        }
-        if(lvl == "4") {
-            // Complex: Clause 1 + Conjunction + Clause 2
-            const clause1 = `${subj} ${verb} ${obj}`;
-            const clause2 = `it is ${adj}`;
-            return capitalize(`${conj} ${clause1}, ${clause2}.`);
-        }
-        if(lvl == "5") {
-            // Business/Advanced
-            return `The ${bus} essentially ${verb} the ${bus} regarding ${obj}.`;
-        }
-        
+        if(lvl == "3") return `${subj} ${adv} ${verb} ${adj} ${obj}.`;
+        if(lvl == "4") return capitalize(`${conj} ${subj} ${verb} ${obj}, it is ${adj}.`);
+        if(lvl == "5") return `The ${bus} essentially ${verb} the ${bus} regarding ${obj}.`;
         return "Learning English opens many doors.";
     }
 
