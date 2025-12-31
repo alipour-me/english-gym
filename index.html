@@ -243,7 +243,9 @@
             if (!KEYS.gemini) throw new Error("No API Key");
 
             const prompt = `Generate a random creative English sentence (Level ${level}, max 12 words). Output ONLY text.`;
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${KEYS.gemini}`, {
+            
+            // FIX: Changed model from 'gemini-pro' to 'gemini-1.5-flash'
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${KEYS.gemini}`, {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
@@ -251,15 +253,11 @@
             
             const data = await res.json();
             
-            // --- DETAILED ERROR DEBUGGING ---
             if(data.error) {
-                // اینجا متن اصلی ارور را میخوانیم
                 const errorMsg = data.error.message || JSON.stringify(data.error);
-                console.error("GOOGLE API DETAILED ERROR:", errorMsg);
-                
-                // نمایش ارور روی صفحه برای کاربر
-                sourceBadge.innerHTML = `<span style="color:#f87171; font-size:0.7rem;">⚠️ Google Error: ${errorMsg}</span>`;
-                
+                console.error("GOOGLE API ERROR:", errorMsg);
+                // Show detailed error in UI
+                sourceBadge.innerHTML = `<span style="color:#f87171; font-size:0.7rem;">⚠️ AI Error: ${errorMsg}</span>`;
                 throw new Error("Google API Error");
             }
             
@@ -269,16 +267,16 @@
 
             currentText = data.candidates[0].content.parts[0].text.replace(/["*]/g, '').trim();
             
-            // Success Indicator
-            sourceBadge.innerHTML = "✨ Source: <b>Google Gemini AI</b>";
+            // Success
+            sourceBadge.innerHTML = "✨ Source: <b>Google Gemini 1.5 Flash</b>";
             sourceBadge.style.color = "#4ade80";
 
         } catch(e) {
-            // FALLBACK Logic
+            // Fallback
             console.warn("Using Fallback Engine. Cause:", e);
             
-            // اگر ارور گوگل نبود، یعنی مشکل چیز دیگری است
-            if(!sourceBadge.innerHTML.includes("Google Error")) {
+            // Only show 'Offline Engine' if it wasn't a visible Google error
+            if(!sourceBadge.innerHTML.includes("AI Error")) {
                  sourceBadge.innerHTML = "📦 Source: <b>Offline Engine</b> (Fallback)";
                  sourceBadge.style.color = "#facc15"; 
             }
