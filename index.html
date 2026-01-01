@@ -157,14 +157,13 @@
             align-items: center;
         }
         button:active { transform: scale(0.96); }
-        button i { font-size: 1.2rem; }
+        button i { font-size: 1.4rem; } /* Slightly larger icons */
         
         .btn-gen { background: linear-gradient(135deg, #f35422, #fe8235); grid-column: span 3; } 
         .btn-listen { background: #f1c40f; color: #333; }
         .btn-check { background: #27ae60; }
         .btn-trans { background: #9b59b6; }
 
-        /* ⚙️ CENTERED SETTINGS BUTTON */
         .btn-settings { 
             background: transparent; 
             border: 1px solid var(--border); 
@@ -186,6 +185,25 @@
         }
         
         #score { margin-top: 15px; font-weight: bold; font-size: 1.2rem;}
+        
+        /* 🔴 Recording Pulse Animation */
+        .recording-pulse {
+            animation: pulse-red 1.2s infinite;
+            background: #e74c3c !important; /* Change to Red when recording */
+            box-shadow: 0 0 15px #e74c3c;
+        }
+        
+        /* 🟠 Connecting Fade Animation */
+        .connecting-pulse {
+            background: #e67e22 !important; /* Orange for connecting */
+            opacity: 0.8;
+        }
+
+        @keyframes pulse-red {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+        }
     </style>
 </head>
 <body>
@@ -319,9 +337,9 @@
     const btnGen = document.getElementById('btn-gen');
 
     const MODEL_QUEUE = [
-        "llama-3.3-70b-versatile",    // Most stable
-        "qwen-2.5-32b",               // Backup
-        "gemma2-9b-it"                // Backup 2
+        "llama-3.3-70b-versatile",    
+        "qwen-2.5-32b",               
+        "gemma2-9b-it"                
     ];
 
     function setLoading(btnId, isLoading) {
@@ -500,15 +518,25 @@
         );
     }
 
+    // --- 🎤 UPDATED CHECK WITH COOL ICONS ---
     async function check() {
         if(!currentText) { alert("Generate first!"); return; }
         
-        setLoading('btn-check', true);
+        const btn = document.getElementById('btn-check');
+        const icon = btn.querySelector('i');
+        const oldIconClass = icon.className;
+        
+        // 1. Initial Connecting State (Satellite Dish)
+        btn.disabled = true;
+        // Connecting Icon: Satellite Searching
+        btn.innerHTML = `<i class="fas fa-satellite-dish fa-beat-fade"></i>`; 
+        btn.classList.add('connecting-pulse');
         document.getElementById('score').innerText = "";
 
         if(!KEYS.azure || !KEYS.region) {
             alert("API Keys Missing!"); 
-            setLoading('btn-check', false);
+            btn.disabled = false; btn.innerHTML = `<i class="${oldIconClass}"></i>`;
+            btn.classList.remove('connecting-pulse');
             return;
         }
 
@@ -528,9 +556,21 @@
             const reco = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
             pron.applyTo(reco);
 
+            // 2. READY State (Waveform + Pulse)
+            reco.sessionStarted = (s, e) => {
+                btn.classList.remove('connecting-pulse');
+                // Speak Icon: Waveform
+                btn.innerHTML = `<i class="fas fa-microphone-lines"></i>`;
+                btn.classList.add('recording-pulse');
+            };
+
             reco.recognizeOnceAsync(res => {
                 stream.getTracks().forEach(track => track.stop());
-                setLoading('btn-check', false);
+                
+                // Reset Button
+                btn.disabled = false; 
+                btn.innerHTML = `<i class="${oldIconClass}"></i>`;
+                btn.classList.remove('recording-pulse', 'connecting-pulse');
                 reco.close();
                 
                 if(res.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
@@ -538,7 +578,9 @@
                     document.getElementById('score').innerHTML = `Score: <span style="color:${r.accuracyScore>=80?'#2ecc71':'#ff6b6b'}">${r.accuracyScore}</span>`;
                     
                     const json = JSON.parse(res.json);
+                    render(currentText); 
                     const spans = document.querySelectorAll('.word');
+                    
                     if(json.NBest && json.NBest.length>0) {
                         json.NBest[0].Words.forEach((w, i) => {
                             if(i < spans.length) {
@@ -547,7 +589,8 @@
                         });
                     }
                 } else if (res.reason === SpeechSDK.ResultReason.NoMatch) {
-                    alert("Could not hear you clearly. Please try again.");
+                    // Suppress alert, just show visually
+                    document.getElementById('score').innerHTML = `<span style="color:#f39c12">No speech detected.</span>`;
                 } else if (res.reason === SpeechSDK.ResultReason.Canceled) {
                     alert("Connection Error. Check Key/Internet.");
                 }
@@ -555,7 +598,9 @@
 
         } catch (e) {
             alert("Mic Error: " + e.message);
-            setLoading('btn-check', false);
+            btn.disabled = false; 
+            btn.innerHTML = `<i class="${oldIconClass}"></i>`;
+            btn.classList.remove('recording-pulse', 'connecting-pulse');
         }
     }
 </script>
