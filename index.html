@@ -2,14 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#1e130c">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="AI Gym">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1e130c">
+    
+    <meta name="apple-mobile-web-app-title" content="AI English Gym">
     <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/brain.png">
 
-    <title>Groq Speed Gym</title>
+    <title>AI English Gym</title>
     
     <script src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@latest/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"></script>
 
@@ -22,21 +24,23 @@
             --accent: #ff9f43;
         }
 
-        /* iOS Full Screen Fix */
-        html, body {
+        /* 🔧 iOS Full Screen & Notch Fix */
+        html {
             height: 100%;
-            margin: 0;
-            padding: 0;
-            background: var(--bg-gradient);
+            background-color: #1e130c; /* Fallback color matching top gradient */
+            background-image: var(--bg-gradient);
             background-attachment: fixed;
+            background-size: cover;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             color: var(--text);
-            padding: 20px;
-            padding-top: env(safe-area-inset-top);
+            margin: 0;
+            /* Safe area for iPhone Notch */
+            padding: env(safe-area-inset-top) 20px 20px 20px; 
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
@@ -46,16 +50,18 @@
 
         .container {
             background: var(--glass);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--border);
-            padding: 20px;
+            padding: 25px;
             border-radius: 24px;
             width: 100%;
             max-width: 500px;
             text-align: center;
             box-shadow: 0 10px 40px rgba(0,0,0,0.6);
             position: relative;
+            /* Ensure container doesn't stick to very top */
+            margin-top: 10px; 
         }
 
         #settings-panel {
@@ -83,7 +89,7 @@
         h2 { margin: 0 0 15px 0; color: var(--accent); font-size: 1.6rem; letter-spacing: -1px;}
         h2 span { font-size: 0.8rem; opacity: 0.7; display: block; margin-top: 5px; color: #fff; }
 
-        h5 { color: var(--accent); font-size: 0.8rem; letter-spacing: 0px; margin-top: 15px;}
+        h5 { color: var(--accent); font-size: 0.8rem; letter-spacing: 0px; margin-top: 20px; opacity: 0.8;}
         h5 a { color: var(--accent); text-decoration: none;}
 
         .target-box {
@@ -153,18 +159,16 @@
 <body>
 
 <div class="container">
-    <h2>⚡ Groq Speed Gym <span>(DeepSeek & Llama)</span></h2>
+    <h2>⚡ English Gym <span>(with AI)</span></h2>
 
     <form id="settings-panel" onsubmit="event.preventDefault(); saveKeys();">
         <div style="font-size:0.9rem; margin-bottom:5px;">🔐 API Setup</div>
         <input type="text" name="username" autocomplete="username" style="display:none;">
-        
         <input type="password" id="inp-groq" placeholder="Paste Groq API Key (gsk_...)" autocomplete="new-password">
-        
         <input type="password" id="inp-azure" placeholder="Paste Azure Key" autocomplete="new-password">
         <input type="text" id="inp-region" placeholder="Region (e.g. eastus)" value="eastus">
         <button type="submit" style="background:#f35422; margin-top:10px;">Save & Start</button>
-        <div style="font-size: 0.7rem; margin-top:5px; opacity:0.7;">Get free key at console.groq.com</div>
+        <div style="font-size: 0.7rem; margin-top:5px; opacity:0.7;">Keys are saved on your device.</div>
     </form>
 
     <div id="main-app">
@@ -197,7 +201,7 @@
         </div>
 
         <div class="actions">
-            <button id="btn-gen" class="btn-gen" onclick="generate()">⚡ Generate (Fast)</button>
+            <button id="btn-gen" class="btn-gen" onclick="generate()">⚡ Generate</button>
             <button class="btn-listen" onclick="listen()">🔊</button>
             <button id="btn-check" class="btn-check" onclick="check()">🎤</button>
         </div>
@@ -208,9 +212,8 @@
     <h5 style="text-decoration: none;"><a href="https://alipour.me" target="_blank">✨ Alireza Alipour ✨</a></h5>
 </div>
 <script>
-    // --- KEYS ---
     let KEYS = {
-        groq: localStorage.getItem("groq_key") || "", // Changed to Groq
+        groq: localStorage.getItem("groq_key") || "", 
         azure: localStorage.getItem("azure_key") || "",
         region: localStorage.getItem("azure_region") || "eastus"
     };
@@ -238,7 +241,7 @@
             localStorage.setItem("azure_region", r);
             KEYS = { groq: g, azure: a, region: r };
             checkKeys();
-            alert("Keys Saved! Ready for Speed.");
+            alert("Keys Saved!");
         } else {
             alert("Please fill keys.");
         }
@@ -257,17 +260,15 @@
 
     checkKeys();
 
-    // --- MEGA VOCABULARY (Offline) ---
     const vocab = {
-        subjects: ["The cat", "My friend", "A stranger", "The teacher", "This project", "Our team", "The system", "Technology", "The weather", "A doctor", "The artist", "This computer", "The government", "A driver", "My boss", "The solution", "An engineer", "The music", "History", "Nature"],
-        verbs: ["creates", "improves", "destroys", "considers", "remembers", "understands", "develops", "changes", "requires", "follows", "guides", "analyzes", "builds", "finds", "loses", "needs", "wants", "supports", "challenges", "discovers"],
-        adjectives: ["creative", "global", "effective", "dangerous", "beautiful", "complex", "simple", "modern", "ancient", "rapid", "slow", "intelligent", "expensive", "cheap", "necessary", "impossible", "real", "fake", "huge", "tiny"],
-        objects: ["the future", "a new strategy", "the big problem", "a simple idea", "the environment", "my question", "the answer", "a fast car", "the blue sky", "an old book", "the tasty food", "a difficult exam", "the software", "a golden opportunity", "the silence", "a secret"],
-        adverbs: ["quickly", "slowly", "suddenly", "carefully", "actually", "probably", "certainly", "eventually", "recently", "always", "never", "often", "rarely", "usually"],
-        conjunctions: ["because", "although", "while", "but", "so", "if", "when", "before", "after"],
-        business_terms: ["synergy", "paradigm shift", "ROI", "bandwidth", "deliverables", "touchpoint", "leverage", "scalability", "best practice", "ecosystem"],
-        l1: ["Apple", "Book", "Car", "Dog", "Eat", "Fast", "Go", "Happy", "Ice", "Jump", "Key", "Love", "Moon", "No", "Open", "Pen", "Quiet", "Red", "Sun", "Time", "Up", "Van", "Water", "Yes", "Zoo", "Bird", "Cat", "Door", "Fish", "Good"],
-        l2: ["Good morning", "How are you", "Thank you", "Excuse me", "I am sorry", "Turn left", "Go straight", "Come here", "Sit down", "Stand up", "Open the door", "Close the window", "A cup of coffee", "My blue car", "Very good", "Not bad", "See you later", "Have a nice day"]
+        subjects: ["The scientist", "My neighbor", "A mysterious stranger", "The student", "The team", "The system", "Technology", "The weather", "A doctor", "The artist", "This computer", "The government", "A driver", "My boss", "The solution", "An engineer", "Music", "History", "Nature", "A dolphin", "The pilot", "A chef", "The writer", "A detective"],
+        verbs: ["creates", "improves", "destroys", "considers", "remembers", "understands", "develops", "changes", "requires", "follows", "guides", "analyzes", "builds", "finds", "loses", "needs", "wants", "supports", "challenges", "discovers", "investigates", "doubts", "trusts", "questions"],
+        adjectives: ["creative", "global", "effective", "dangerous", "beautiful", "complex", "simple", "modern", "ancient", "rapid", "slow", "intelligent", "expensive", "cheap", "necessary", "impossible", "real", "fake", "huge", "tiny", "silent", "noisy", "calm", "wild"],
+        objects: ["the future", "a new strategy", "the big problem", "a simple idea", "the environment", "my question", "the answer", "a fast car", "the blue sky", "an old book", "the tasty food", "a difficult exam", "the software", "a opportunity", "the silence", "a secret", "the truth", "a masterpiece"],
+        adverbs: ["quickly", "slowly", "suddenly", "carefully", "actually", "probably", "certainly", "eventually", "recently", "always", "never", "often", "rarely", "usually", "barely", "happily", "sadly", "bravely"],
+        conjunctions: ["because", "although", "while", "but", "so", "if", "when", "before", "after", "since", "unless"],
+        l1: ["Apple", "Book", "Car", "Dog", "Eat", "Fast", "Go", "Happy", "Ice", "Jump", "Key", "Love", "Moon", "No", "Open", "Pen", "Quiet", "Red", "Sun", "Time", "Up", "Van", "Water", "Yes", "Zoo", "Bird", "Cat", "Door", "Fish", "Good", "Hat", "Ink", "Kite", "Lamp", "Map", "Nut", "Owl", "Pig", "Run", "Sit"],
+        l2: ["Good morning", "How are you", "Thank you", "Excuse me", "I am sorry", "Turn left", "Go straight", "Come here", "Sit down", "Stand up", "Open the door", "Close the window", "A cup of tea", "My blue car", "Very good", "Not bad", "See you later", "Have a nice day", "Good luck", "Well done"]
     };
 
     const rand = (a) => a[Math.floor(Math.random()*a.length)];
@@ -278,17 +279,16 @@
     const sourceBadge = document.getElementById('source-badge');
     const btnGen = document.getElementById('btn-gen');
 
-    // --- 🚀 GROQ MODEL LIST ---
-    // Includes DeepSeek (Distilled), Llama 3 (Meta), Gemma 2 (Google), Qwen (Alibaba)
     const MODEL_QUEUE = [
-        "llama-3.3-70b-versatile",         // Extremely Smart & Fast
-        "deepseek-r1-distill-llama-70b",   // DeepSeek Logic
-        "gemma2-9b-it",                    // Google's Open Model
-        "mixtral-8x7b-32768"               // Mistral
+        "llama-3.3-70b-versatile",    // Most stable, follows rules
+        "qwen-2.5-32b",               // Backup
+        "gemma2-9b-it"                // Backup 2
     ];
 
     async function fetchGroq(modelName, prompt) {
-        // Groq uses OpenAI-compatible API format
+        // Anti-Cache Seed
+        const randomSeed = Math.floor(Math.random() * 1000000);
+        
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -297,9 +297,13 @@
             },
             body: JSON.stringify({
                 model: modelName,
-                messages: [{ role: "user", content: prompt }],
-                temperature: 0.7,
-                max_tokens: 50
+                messages: [
+                    { role: "system", content: `You are a creative English tutor. Current Seed: ${randomSeed}. Always generate a FRESH, UNIQUE, and NON-REPETITIVE example. Output ONLY the text.` },
+                    { role: "user", content: prompt }
+                ],
+                temperature: 1.2, // High creativity
+                max_tokens: 1024,
+                top_p: 1
             })
         });
 
@@ -309,14 +313,15 @@
     }
 
     function getPrompt(level) {
-        const topics = ["Technology", "Travel", "Daily Life", "Food", "Work", "Nature", "Emotions", "Space", "History"];
+        const topics = ["Technology", "Travel", "Daily Life", "Food", "Work", "Nature", "Emotions", "Space", "History", "Sports", "Music", "Cinema", "Dreams", "Ocean", "Forest", "City"];
         const randomTopic = rand(topics);
+        
         switch(level) {
-            case "1": return `Generate exactly ONE unique English word (Noun, Verb, or Adjective). Try to avoid very common words. Just the word. No punctuation.`;
-            case "2": return `Generate a useful English idiom or common phrase (2-4 words). Example: 'Break a leg', 'Once in a blue moon'. No periods.`;
+            case "1": return `Generate exactly ONE unique English word (Noun, Verb, or Adjective). Avoid very common words like 'apple' or 'cat'. Just the word. No punctuation.`;
+            case "2": return `Generate a creative English idiom or short phrase (2-4 words). Example: 'Piece of cake', 'Time flies'. No periods.`;
             case "3": return `Generate a simple English sentence about ${randomTopic} (Subject + Verb + Object). Approx 6-8 words.`;
             case "4": return `Generate a complex sentence about ${randomTopic} using conjunctions (e.g., although, because). Approx 10-12 words.`;
-            case "5": return `Generate a sophisticated sentence about ${randomTopic} using advanced C1/C2 vocabulary.`;
+            case "5": return `Generate a sophisticated sentence about ${randomTopic} using advanced C1 vocabulary.`;
             default: return "Generate a random English sentence.";
         }
     }
@@ -328,21 +333,26 @@
         
         try {
             if (!KEYS.groq) throw new Error("No Groq Key");
-            
-            const prompt = getPrompt(level) + " Output ONLY the text. No quotes. No explanations.";
-            
+            const prompt = getPrompt(level);
             let success = false;
+            
             for (const model of MODEL_QUEUE) {
                 try {
                     currentText = await fetchGroq(model, prompt);
-                    sourceBadge.innerHTML = `✨ Source: <b>${model}</b> (Groq)`;
-                    sourceBadge.style.color = "#f35422"; // Groq Orange
+                    // Cleaning
+                    currentText = currentText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+                    currentText = currentText.replace(/<think>[\s\S]*/gi, "").trim();
+                    currentText = currentText.replace(/["*]/g, '').trim();
+
+                    if (!currentText || currentText.length < 2) throw new Error("Empty");
+
+                    sourceBadge.innerHTML = `✨ Source: <b>${model}</b>`;
+                    sourceBadge.style.color = "#f35422"; 
                     success = true; break;
                 } catch (err) { console.warn(`Skipping ${model}:`, err.message); }
             }
-            if (!success) throw new Error("All Groq Models Failed");
+            if (!success) throw new Error("All Failed");
             
-            currentText = currentText.replace(/["*]/g, '').trim();
         } catch(e) {
             console.warn("OFFLINE FALLBACK:", e);
             currentText = generateLocal(level);
@@ -350,25 +360,17 @@
             sourceBadge.style.color = "#f1c40f";
         }
         render(currentText);
-        btnGen.disabled = false; btnGen.innerText = "⚡ Generate (Fast)";
+        btnGen.disabled = false; btnGen.innerText = "⚡ Generate";
     }
 
     function generateLocal(lvl) {
         if(lvl == "1") return rand(vocab.l1);
         if(lvl == "2") return rand(vocab.l2);
-        
-        const subj = rand(vocab.subjects);
-        const verb = rand(vocab.verbs);
-        const adj = rand(vocab.adjectives);
-        const obj = rand(vocab.objects);
-        const adv = rand(vocab.adverbs);
-        const conj = rand(vocab.conjunctions);
-        const bus = rand(vocab.business_terms);
-
-        if(lvl == "3") return `${subj} ${adv} ${verb} ${adj} ${obj}.`;
-        if(lvl == "4") return capitalize(`${conj} ${subj} ${verb} ${obj}, it is ${adj}.`);
-        if(lvl == "5") return `The ${bus} essentially ${verb} the ${bus} regarding ${obj}.`;
-        return "Learning English opens many doors.";
+        const s = rand(vocab.subjects); const v = rand(vocab.verbs); const a = rand(vocab.adjectives); const o = rand(vocab.objects); const ad = rand(vocab.adverbs); const c = rand(vocab.conjunctions);
+        if(lvl == "3") return `${s} ${ad} ${v} ${a} ${o}.`;
+        if(lvl == "4") return capitalize(`${c} ${s} ${v} ${o}, it is ${a}.`);
+        if(lvl == "5") return `The ${a} nature of ${o} significantly ${v} the outcome.`;
+        return "Practice makes perfect.";
     }
 
     function render(txt) {
@@ -391,29 +393,14 @@
         const selectedVoice = document.getElementById('voice-name').value;
         const selectedSpeed = document.getElementById('voice-speed').value;
 
-        const ssml = `
-        <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
-            <voice name="${selectedVoice}">
-                <prosody rate="${selectedSpeed}">
-                    ${currentText}
-                </prosody>
-            </voice>
-        </speak>`;
+        const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US"><voice name="${selectedVoice}"><prosody rate="${selectedSpeed}">${currentText}</prosody></voice></speak>`;
 
         const audioConfig = SpeechSDK.AudioConfig.fromDefaultSpeakerOutput();
         const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
 
-        synthesizer.speakSsmlAsync(
-            ssml,
-            result => {
-                btnListen.disabled = false; btnListen.innerText = originalText;
-                synthesizer.close();
-            },
-            error => {
-                console.error("TTS Error:", error);
-                btnListen.disabled = false; btnListen.innerText = "Error";
-                synthesizer.close();
-            }
+        synthesizer.speakSsmlAsync(ssml,
+            result => { btnListen.disabled = false; btnListen.innerText = originalText; synthesizer.close(); },
+            error => { console.error("TTS Error:", error); btnListen.disabled = false; btnListen.innerText = "Error"; synthesizer.close(); }
         );
     }
 
@@ -434,8 +421,7 @@
             btn.disabled = false; btn.innerText = old; reco.close();
             if(res.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
                 const r = SpeechSDK.PronunciationAssessmentResult.fromResult(res);
-                const score = r.accuracyScore;
-                document.getElementById('score').innerHTML = `Score: <span style="color:${score>=80?'#2ecc71':'#ff6b6b'}">${score}</span>`;
+                document.getElementById('score').innerHTML = `Score: <span style="color:${r.accuracyScore>=80?'#2ecc71':'#ff6b6b'}">${r.accuracyScore}</span>`;
                 const json = JSON.parse(res.json);
                 const spans = document.querySelectorAll('.word');
                 if(json.NBest && json.NBest.length>0) {
