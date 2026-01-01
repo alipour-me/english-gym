@@ -434,8 +434,8 @@
             speechConfig.speechRecognitionLanguage = "en-US";
             
             // 🔥 CRITICAL FIX: Increase Timeout for Mobile Latency
-            speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "5000"); // 5s wait
-            speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "2000"); // 2s pause to end
+            speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "10000"); // 10s wait
+            speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "5000"); // 5s pause to end
 
             const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
             const pron = new SpeechSDK.PronunciationAssessmentConfig(currentText, 2, 2, true);
