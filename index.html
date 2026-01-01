@@ -26,9 +26,10 @@
             --accent: #ff9f43;
         }
 
+        /* 🔧 iOS Full Screen & Notch Fix */
         html {
             height: 100%;
-            background-color: #1e130c;
+            background-color: #1e130c; 
             background-image: var(--bg-gradient);
             background-attachment: fixed;
             background-size: cover;
@@ -280,13 +281,12 @@
     const btnGen = document.getElementById('btn-gen');
 
     const MODEL_QUEUE = [
-        "llama-3.3-70b-versatile",    // Most stable, follows rules
+        "llama-3.3-70b-versatile",    // Most stable
         "qwen-2.5-32b",               // Backup
         "gemma2-9b-it"                // Backup 2
     ];
 
     async function fetchGroq(modelName, prompt) {
-        // Anti-Cache Seed
         const randomSeed = Math.floor(Math.random() * 1000000);
         
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -301,7 +301,7 @@
                     { role: "system", content: `You are a creative English tutor. Current Seed: ${randomSeed}. Always generate a FRESH, UNIQUE, and NON-REPETITIVE example. Output ONLY the text.` },
                     { role: "user", content: prompt }
                 ],
-                temperature: 1.2, // High creativity
+                temperature: 1.2, 
                 max_tokens: 1024,
                 top_p: 1
             })
@@ -339,7 +339,6 @@
             for (const model of MODEL_QUEUE) {
                 try {
                     currentText = await fetchGroq(model, prompt);
-                    // Cleaning
                     currentText = currentText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
                     currentText = currentText.replace(/<think>[\s\S]*/gi, "").trim();
                     currentText = currentText.replace(/["*]/g, '').trim();
@@ -404,58 +403,45 @@
         );
     }
 
-    // --- 🎤 UPDATED CHECK FUNCTION (DEBUG MODE) ---
-    function check() {
-        if(!currentText) {
-            alert("Please generate a sentence first!");
-            return;
-        }
+    // --- 🎤 UPDATED CHECK FUNCTION (FIXED FOR MOBILE) ---
+    async function check() {
+        if(!currentText) { alert("Generate first!"); return; }
         
         const btn = document.getElementById('btn-check');
         const old = btn.innerText;
-        btn.disabled = true; btn.innerText = "👂 Listening...";
+        btn.disabled = true; btn.innerText = "🎤 Listening...";
         document.getElementById('score').innerText = "";
 
-        // 1. Basic Check: Are keys present?
         if(!KEYS.azure || !KEYS.region) {
-            alert("Error: Azure API Keys are missing. Click settings to add them.");
-            btn.disabled = false; btn.innerText = old;
-            return;
+            alert("API Keys Missing!"); btn.disabled = false; btn.innerText = old; return;
         }
 
         try {
+            // 1. Explicitly request Mic Permission (Wakes up iOS Audio)
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            // 2. Setup Azure
             const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(KEYS.azure, KEYS.region);
             speechConfig.speechRecognitionLanguage = "en-US";
             
-            // 2. Explicitly request microphone
+            // 🔥 CRITICAL FIX: Increase Timeout for Mobile Latency
+            speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "10000"); // 10s wait
+            speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "3000"); // 3s pause to end
+
             const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
-            
             const pron = new SpeechSDK.PronunciationAssessmentConfig(currentText, 2, 2, true);
             const reco = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
             pron.applyTo(reco);
 
-            // 3. Error Handler
-            reco.canceled = (s, e) => {
-                console.error("Canceled:", e);
-                let err = e.errorDetails;
-                if(err.includes("1006")) err = "Connection failed. Check Internet/VPN.";
-                if(err.includes("401")) err = "Invalid Key or Region.";
-                if(err.includes("Permission denied")) err = "Microphone Permission Denied.";
-                
-                alert(`Microphone Error:\n${err}\n\nMake sure you are using HTTPS!`);
-                btn.disabled = false; btn.innerText = old;
-                reco.close();
-            };
-
-            // 4. Start
+            // 3. Start
             reco.recognizeOnceAsync(res => {
-                btn.disabled = false; btn.innerText = old; 
-                reco.close();
+                // Stop tracks to release mic
+                stream.getTracks().forEach(track => track.stop());
+                btn.disabled = false; btn.innerText = old; reco.close();
                 
                 if(res.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
                     const r = SpeechSDK.PronunciationAssessmentResult.fromResult(res);
-                    const score = r.accuracyScore;
-                    document.getElementById('score').innerHTML = `Score: <span style="color:${score>=80?'#2ecc71':'#ff6b6b'}">${score}</span>`;
+                    document.getElementById('score').innerHTML = `Score: <span style="color:${r.accuracyScore>=80?'#2ecc71':'#ff6b6b'}">${r.accuracyScore}</span>`;
                     
                     const json = JSON.parse(res.json);
                     const spans = document.querySelectorAll('.word');
@@ -467,12 +453,14 @@
                         });
                     }
                 } else if (res.reason === SpeechSDK.ResultReason.NoMatch) {
-                    alert("Could not hear you clearly. Please try again.");
+                    alert("Could not hear you. Please speak closer to mic.");
+                } else if (res.reason === SpeechSDK.ResultReason.Canceled) {
+                    alert("Connection Error. Check Key/Internet.");
                 }
             });
 
         } catch (e) {
-            alert("System Error: " + e.message);
+            alert("Mic Error: " + e.message + "\n(Ensure HTTPS)");
             btn.disabled = false; btn.innerText = old;
         }
     }
