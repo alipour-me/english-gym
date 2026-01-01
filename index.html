@@ -119,7 +119,6 @@
         }
 
         .word { padding: 2px 2px; border-radius: 6px; transition: 0.2s;}
-        /*.word-correct { color: #2ecc71; background: rgba(46, 204, 113, 0.15); }*/
         .word-correct { color: #2ecc71; }
         .word-error { color: #ff6b6b; text-decoration: underline wavy #ff6b6b; }
         
@@ -220,6 +219,7 @@
         region: localStorage.getItem("azure_region") || "eastus"
     };
 
+    // --- 💾 HISTORY MANAGER ---
     let history = JSON.parse(localStorage.getItem("gym_history") || "[]");
 
     function checkKeys() {
@@ -291,7 +291,8 @@
 
     async function fetchGroq(modelName, prompt) {
         const randomSeed = Math.floor(Math.random() * 1000000);
-
+        
+        // --- 🔥 ANTI-REPEAT LOGIC ---
         const exclusions = history.slice(-10).join(", ");
         
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -350,6 +351,7 @@
 
                     if (!currentText || currentText.length < 2) throw new Error("Empty");
 
+                    // --- 💾 SAVE TO HISTORY ---
                     history.push(currentText);
                     if (history.length > 50) history.shift();
                     localStorage.setItem("gym_history", JSON.stringify(history));
@@ -412,7 +414,7 @@
         );
     }
 
-    // --- 🎤 UPDATED CHECK FUNCTION (FIXED FOR MOBILE) ---
+    // --- 🎤 OPTIMIZED CHECK (SENSITIVE & FAST) ---
     async function check() {
         if(!currentText) { alert("Generate first!"); return; }
         
@@ -426,26 +428,35 @@
         }
 
         try {
-            // 1. Explicitly request Mic Permission (Wakes up iOS Audio)
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // 🚀 1. BOOST AUDIO SENSITIVITY (AUTO GAIN)
+            // This is the magic line that makes it hear whispers
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: { 
+                    autoGainControl: true, 
+                    echoCancellation: true, 
+                    noiseSuppression: true 
+                } 
+            });
             
-            // 2. Setup Azure
             const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(KEYS.azure, KEYS.region);
             speechConfig.speechRecognitionLanguage = "en-US";
             
-            // 🔥 CRITICAL FIX: Increase Timeout for Mobile Latency
-            speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "10000"); // 10s wait
-            speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "5000"); // 5s pause to end
+            // 🚀 2. OPTIMIZED TIMEOUTS (FAST BUT SAFE)
+            // 10s wait for start (patient)
+            // 3s pause for end (snappy but not cutoff)
+            speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "10000"); 
+            speechConfig.setProperty(SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "3000"); 
 
             const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
             const pron = new SpeechSDK.PronunciationAssessmentConfig(currentText, 2, 2, true);
             const reco = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
             pron.applyTo(reco);
 
-            // 3. Start
+            // 3. Start Recognition
             reco.recognizeOnceAsync(res => {
-                // Stop tracks to release mic
+                // Release Mic
                 stream.getTracks().forEach(track => track.stop());
+                
                 btn.disabled = false; btn.innerText = old; reco.close();
                 
                 if(res.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
@@ -462,7 +473,7 @@
                         });
                     }
                 } else if (res.reason === SpeechSDK.ResultReason.NoMatch) {
-                    alert("Could not hear you. Please speak closer to mic.");
+                    alert("Could not hear you clearly. Please try again.");
                 } else if (res.reason === SpeechSDK.ResultReason.Canceled) {
                     alert("Connection Error. Check Key/Internet.");
                 }
