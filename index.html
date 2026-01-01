@@ -13,6 +13,8 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <title>AI English Gym</title>
     
     <script src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@latest/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"></script>
@@ -107,9 +109,8 @@
             line-height: 1.5;
         }
 
-        /* 🇮🇷 Persian Translation Style */
         #translation-text {
-            font-family: 'Vazirmatn', sans-serif; /* Vazir Font */
+            font-family: 'Vazirmatn', sans-serif;
             font-size: 1.1rem;
             color: #eeeeee;
             margin-bottom: 15px;
@@ -140,7 +141,6 @@
             margin-bottom: 15px;
         }
 
-        /* 🔘 3-Column Layout for Action Buttons */
         .actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
         
         button {
@@ -151,18 +151,33 @@
             cursor: pointer;
             color: white;
             font-weight: 700;
-            transition: transform 0.1s;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         button:active { transform: scale(0.96); }
+        button i { font-size: 1.2rem; }
         
-        /* Generate spans full width */
         .btn-gen { background: linear-gradient(135deg, #f35422, #fe8235); grid-column: span 3; } 
-        
         .btn-listen { background: #f1c40f; color: #333; }
         .btn-check { background: #27ae60; }
-        .btn-trans { background: #9b59b6; } /* Purple for Translate */
+        .btn-trans { background: #9b59b6; }
 
-        .btn-settings { background: transparent; border: 1px solid var(--border); font-size: 0.8rem; margin-top: 25px; opacity: 0.5; padding: 10px;}
+        /* ⚙️ CENTERED SETTINGS BUTTON */
+        .btn-settings { 
+            background: transparent; 
+            border: 1px solid var(--border); 
+            font-size: 0.8rem; 
+            margin-top: 25px; 
+            opacity: 0.5; 
+            padding: 10px 20px;
+            border-radius: 20px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: fit-content;
+        }
 
         select {
             width: 100%; padding: 10px; 
@@ -222,9 +237,9 @@
 
         <div class="actions">
             <button id="btn-gen" class="btn-gen" onclick="generate()">⚡ Generate</button>
-            <button class="btn-listen" onclick="listen()">🔊</button>
-            <button id="btn-check" class="btn-check" onclick="check()">🎤</button>
-            <button id="btn-trans" class="btn-trans" onclick="translateText()">🌐</button>
+            <button id="btn-listen" class="btn-listen" onclick="listen()"><i class="fas fa-volume-up"></i></button>
+            <button id="btn-check" class="btn-check" onclick="check()"><i class="fas fa-microphone"></i></button>
+            <button id="btn-trans" class="btn-trans" onclick="translateText()"><i class="fas fa-language"></i></button>
         </div>
         
         <div id="score"></div>
@@ -309,18 +324,33 @@
         "gemma2-9b-it"                // Backup 2
     ];
 
-    // 🔥 Improved fetchGroq: Supports Custom System Prompt & Temperature
+    function setLoading(btnId, isLoading) {
+        const btn = document.getElementById(btnId);
+        const icon = btn.querySelector('i');
+        if (isLoading) {
+            btn.disabled = true;
+            icon.classList.add('fa-spin');
+            if (btnId === 'btn-listen') icon.className = 'fas fa-circle-notch fa-spin';
+            if (btnId === 'btn-check') icon.className = 'fas fa-spinner fa-spin';
+            if (btnId === 'btn-trans') icon.className = 'fas fa-sync-alt fa-spin';
+        } else {
+            btn.disabled = false;
+            icon.classList.remove('fa-spin');
+            if (btnId === 'btn-listen') icon.className = 'fas fa-volume-up';
+            if (btnId === 'btn-check') icon.className = 'fas fa-microphone';
+            if (btnId === 'btn-trans') icon.className = 'fas fa-language';
+        }
+    }
+
     async function fetchGroq(modelName, prompt, systemOverride = null, tempOverride = null) {
         const randomSeed = Math.floor(Math.random() * 1000000);
         
-        // Use default system prompt (Creative Tutor) if not overridden
         let systemContent = systemOverride;
         if (!systemContent) {
             const exclusions = history.slice(-10).join(", ");
             systemContent = `You are a creative English tutor. Current Seed: ${randomSeed}. Always generate a FRESH, UNIQUE, and NON-REPETITIVE example. Do NOT use these recent examples: [${exclusions}]. Output ONLY the text.`;
         }
 
-        // Use default temp (1.2) if not overridden
         const temp = tempOverride !== null ? tempOverride : 1.2;
 
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -364,7 +394,7 @@
         const level = document.getElementById('level-input').value;
         btnGen.disabled = true; btnGen.innerText = "🚀 Generating...";
         document.getElementById('score').innerText = "";
-        transEl.innerText = ""; // Clear translation
+        transEl.innerText = "";
         
         try {
             if (!KEYS.groq) throw new Error("No Groq Key");
@@ -373,17 +403,14 @@
             
             for (const model of MODEL_QUEUE) {
                 try {
-                    // Call without overrides (uses high temp & creative prompt)
                     currentText = await fetchGroq(model, prompt);
                     
-                    // Cleaning
                     currentText = currentText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
                     currentText = currentText.replace(/<think>[\s\S]*/gi, "").trim();
                     currentText = currentText.replace(/["*]/g, '').trim();
 
                     if (!currentText || currentText.length < 2) throw new Error("Empty");
 
-                    // History
                     history.push(currentText);
                     if (history.length > 50) history.shift();
                     localStorage.setItem("gym_history", JSON.stringify(history));
@@ -405,22 +432,16 @@
         btnGen.disabled = false; btnGen.innerText = "⚡ Generate";
     }
 
-    // --- 🌐 TRANSLATION LOGIC (HIGH QUALITY) ---
     async function translateText() {
         if(!currentText) return;
-        const btn = document.getElementById('btn-trans');
-        const oldText = btn.innerText;
-        btn.disabled = true; btn.innerText = "⏳ ...";
+        setLoading('btn-trans', true);
         
         try {
             const prompt = `Translate this text to fluent, natural Persian (Farsi). Output ONLY the translation, no extra explanations. Text: "${currentText}"`;
-            
-            // 🔥 Use Low Temperature (0.3) & Translator Persona for accuracy
             const sysPrompt = "You are a professional English to Persian translator. You provide accurate, natural, and high-quality translations.";
             
             let translation = await fetchGroq(MODEL_QUEUE[0], prompt, sysPrompt, 0.3);
             
-            // Clean up
             translation = translation.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
             translation = translation.replace(/["*]/g, '').trim();
             
@@ -430,7 +451,7 @@
             console.error(e);
             transEl.innerText = "Translation Failed.";
         }
-        btn.disabled = false; btn.innerText = oldText;
+        setLoading('btn-trans', false);
     }
 
     function generateLocal(lvl) {
@@ -455,9 +476,7 @@
 
     function listen() {
         if(!currentText) return;
-        const btnListen = document.querySelector('.btn-listen');
-        const originalText = btnListen.innerText;
-        btnListen.disabled = true; btnListen.innerText = "⏳ ...";
+        setLoading('btn-listen', true);
 
         const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(KEYS.azure, KEYS.region);
         const selectedVoice = document.getElementById('voice-name').value;
@@ -469,21 +488,28 @@
         const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
 
         synthesizer.speakSsmlAsync(ssml,
-            result => { btnListen.disabled = false; btnListen.innerText = originalText; synthesizer.close(); },
-            error => { console.error("TTS Error:", error); btnListen.disabled = false; btnListen.innerText = "Error"; synthesizer.close(); }
+            result => { 
+                setLoading('btn-listen', false);
+                synthesizer.close(); 
+            },
+            error => { 
+                console.error("TTS Error:", error); 
+                setLoading('btn-listen', false);
+                synthesizer.close(); 
+            }
         );
     }
 
     async function check() {
         if(!currentText) { alert("Generate first!"); return; }
         
-        const btn = document.getElementById('btn-check');
-        const old = btn.innerText;
-        btn.disabled = true; btn.innerText = "🎤 Listening...";
+        setLoading('btn-check', true);
         document.getElementById('score').innerText = "";
 
         if(!KEYS.azure || !KEYS.region) {
-            alert("API Keys Missing!"); btn.disabled = false; btn.innerText = old; return;
+            alert("API Keys Missing!"); 
+            setLoading('btn-check', false);
+            return;
         }
 
         try {
@@ -504,7 +530,8 @@
 
             reco.recognizeOnceAsync(res => {
                 stream.getTracks().forEach(track => track.stop());
-                btn.disabled = false; btn.innerText = old; reco.close();
+                setLoading('btn-check', false);
+                reco.close();
                 
                 if(res.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
                     const r = SpeechSDK.PronunciationAssessmentResult.fromResult(res);
@@ -528,7 +555,7 @@
 
         } catch (e) {
             alert("Mic Error: " + e.message);
-            btn.disabled = false; btn.innerText = old;
+            setLoading('btn-check', false);
         }
     }
 </script>
