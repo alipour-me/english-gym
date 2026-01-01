@@ -26,10 +26,9 @@
             --accent: #ff9f43;
         }
 
-        /* 🔧 iOS Full Screen & Notch Fix */
         html {
             height: 100%;
-            background-color: #1e130c; /* Fallback color matching top gradient */
+            background-color: #1e130c;
             background-image: var(--bg-gradient);
             background-attachment: fixed;
             background-size: cover;
@@ -39,8 +38,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             color: var(--text);
             margin: 0;
-            /* Safe area for iPhone Notch */
-            padding: env(safe-area-inset-top) 20px 20px 20px; 
+            padding: env(safe-area-inset-top) 0 20px 0; 
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -57,11 +55,8 @@
             border: 1px solid var(--border);
             padding: 25px;
             border-radius: 24px;
-            
-            /* ✅ FIXED: Changed width from 100% to 90% for mobile spacing */
             width: 90%; 
             max-width: 500px;
-            
             text-align: center;
             box-shadow: 0 10px 40px rgba(0,0,0,0.6);
             position: relative;
@@ -409,35 +404,77 @@
         );
     }
 
+    // --- 🎤 UPDATED CHECK FUNCTION (DEBUG MODE) ---
     function check() {
-        if(!currentText) return;
+        if(!currentText) {
+            alert("Please generate a sentence first!");
+            return;
+        }
+        
         const btn = document.getElementById('btn-check');
         const old = btn.innerText;
-        btn.disabled = true; btn.innerText = "🎤 ...";
+        btn.disabled = true; btn.innerText = "👂 Listening...";
+        document.getElementById('score').innerText = "";
 
-        const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(KEYS.azure, KEYS.region);
-        speechConfig.speechRecognitionLanguage = "en-US";
-        const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
-        const pron = new SpeechSDK.PronunciationAssessmentConfig(currentText, 2, 2, true); 
-        const reco = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
-        pron.applyTo(reco);
+        // 1. Basic Check: Are keys present?
+        if(!KEYS.azure || !KEYS.region) {
+            alert("Error: Azure API Keys are missing. Click settings to add them.");
+            btn.disabled = false; btn.innerText = old;
+            return;
+        }
 
-        reco.recognizeOnceAsync(res => {
-            btn.disabled = false; btn.innerText = old; reco.close();
-            if(res.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
-                const r = SpeechSDK.PronunciationAssessmentResult.fromResult(res);
-                document.getElementById('score').innerHTML = `Score: <span style="color:${r.accuracyScore>=80?'#2ecc71':'#ff6b6b'}">${r.accuracyScore}</span>`;
-                const json = JSON.parse(res.json);
-                const spans = document.querySelectorAll('.word');
-                if(json.NBest && json.NBest.length>0) {
-                    json.NBest[0].Words.forEach((w, i) => {
-                        if(i < spans.length) {
-                            spans[i].className = "word " + (w.PronunciationAssessment.ErrorType==="None" && w.PronunciationAssessment.AccuracyScore>=80 ? "word-correct" : "word-error");
-                        }
-                    });
+        try {
+            const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(KEYS.azure, KEYS.region);
+            speechConfig.speechRecognitionLanguage = "en-US";
+            
+            // 2. Explicitly request microphone
+            const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+            
+            const pron = new SpeechSDK.PronunciationAssessmentConfig(currentText, 2, 2, true);
+            const reco = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+            pron.applyTo(reco);
+
+            // 3. Error Handler
+            reco.canceled = (s, e) => {
+                console.error("Canceled:", e);
+                let err = e.errorDetails;
+                if(err.includes("1006")) err = "Connection failed. Check Internet/VPN.";
+                if(err.includes("401")) err = "Invalid Key or Region.";
+                if(err.includes("Permission denied")) err = "Microphone Permission Denied.";
+                
+                alert(`Microphone Error:\n${err}\n\nMake sure you are using HTTPS!`);
+                btn.disabled = false; btn.innerText = old;
+                reco.close();
+            };
+
+            // 4. Start
+            reco.recognizeOnceAsync(res => {
+                btn.disabled = false; btn.innerText = old; 
+                reco.close();
+                
+                if(res.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
+                    const r = SpeechSDK.PronunciationAssessmentResult.fromResult(res);
+                    const score = r.accuracyScore;
+                    document.getElementById('score').innerHTML = `Score: <span style="color:${score>=80?'#2ecc71':'#ff6b6b'}">${score}</span>`;
+                    
+                    const json = JSON.parse(res.json);
+                    const spans = document.querySelectorAll('.word');
+                    if(json.NBest && json.NBest.length>0) {
+                        json.NBest[0].Words.forEach((w, i) => {
+                            if(i < spans.length) {
+                                spans[i].className = "word " + (w.PronunciationAssessment.ErrorType==="None" && w.PronunciationAssessment.AccuracyScore>=80 ? "word-correct" : "word-error");
+                            }
+                        });
+                    }
+                } else if (res.reason === SpeechSDK.ResultReason.NoMatch) {
+                    alert("Could not hear you clearly. Please try again.");
                 }
-            }
-        });
+            });
+
+        } catch (e) {
+            alert("System Error: " + e.message);
+            btn.disabled = false; btn.innerText = old;
+        }
     }
 </script>
 </body>
